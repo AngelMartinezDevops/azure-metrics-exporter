@@ -1,0 +1,148 @@
+# Specific configuration for INFRA environment
+# This file overrides values from helm-chart-azure-metrics-exporter/values.yaml
+
+# Number of replicas for this environment
+replicaCount: 1
+
+# Secret: DO NOT create, already exists in K8s created manually
+secret:
+  create: false
+
+# Docker Image
+image:
+  repository: webdevops/azure-metrics-exporter
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+# Service: Expose as NodePort for access from external VM (Prometheus)
+service:
+  type: NodePort
+  port: 8080
+  nodePort: 30080  # Fixed port on cluster nodes
+
+# Ingress: Expose with URL (alternative to NodePort)
+ingress:
+  enabled: true
+  ingressClassName: "traefik"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+  hosts:
+    - host: azure-metrics.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: azure-metrics-tls
+      hosts:
+        - azure-metrics.example.com
+
+# CPU/Memory resources specific for infra
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Azure credentials (overridden by ArgoCD secrets)
+# NOTE: These are placeholder values, real ones come from secrets/
+azure:
+  tenantId: "PLACEHOLDER_TENANT_ID"
+  clientId: "PLACEHOLDER_CLIENT_ID"
+  clientSecret: "PLACEHOLDER_CLIENT_SECRET"
+  subscriptionId: "PLACEHOLDER_SUBSCRIPTION_ID"
+
+# Metrics configuration specific for INFRA
+# NOTE: Adjust the real resources that exist in your INFRA environment
+# This is an example based on standard naming: {type}-{env}-{stack}
+metricsConfig: |
+  defaultInterval: 60s
+  
+  targets:
+    # REDIS - For caching in INFRA environment
+    # Pattern: redis-{env}-{stack}
+    - resourceType: "Microsoft.Cache/redis"
+      resourceGroup: "rg-infra-shared"
+      resources: ["redis-infra-shared"]
+      metrics:
+        - name: connectedclients
+          aggregations: ["Maximum"]
+        - name: usedmemory
+          aggregations: ["Average", "Maximum"]
+        - name: usedmemorypercentage
+          aggregations: ["Average"]
+        - name: cacheRead
+          aggregations: ["Average"]
+        - name: cacheWrite
+          aggregations: ["Average"]
+        - name: cachehits
+          aggregations: ["Total"]
+        - name: cachemisses
+          aggregations: ["Total"]
+    
+    # APPLICATION GATEWAY - For routing in INFRA environment
+    # Pattern: agw-{env}-{stack}-{name}
+    - resourceType: "Microsoft.Network/applicationGateways"
+      resourceGroup: "rg-infra-shared"
+      resources: ["agw-infra-shared-app"]
+      metrics:
+        - name: ResponseStatus
+          aggregations: ["Total"]
+        - name: TotalRequests
+          aggregations: ["Total"]
+        - name: Throughput
+          aggregations: ["Average"]
+        - name: BackendResponseStatus
+          aggregations: ["Total"]
+        - name: CurrentConnections
+          aggregations: ["Average"]
+    
+    # STORAGE ACCOUNT - For logs and backups
+    # Pattern: storage{env}{type}
+    - resourceType: "Microsoft.Storage/storageAccounts"
+      resourceGroup: "rg-infra-shared"
+      resources: ["storageinfrabackup"]
+      metrics:
+        - name: UsedCapacity
+          aggregations: ["Average"]
+        - name: Transactions
+          aggregations: ["Total"]
+        - name: Ingress
+          aggregations: ["Total"]
+        - name: Egress
+          aggregations: ["Total"]
+        - name: SuccessServerLatency
+          aggregations: ["Average"]
+    
+    # If MYSQL exists in INFRA (uncomment if needed)
+    # - resourceType: "Microsoft.DBforMySQL/flexibleServers"
+    #   resourceGroup: "rg-infra-shared"
+    #   resources: ["mysql-infra-shared-01"]
+    #   metrics:
+    #     - name: cpu_percent
+    #       aggregations: ["Average", "Maximum"]
+    #     - name: memory_percent
+    #       aggregations: ["Average"]
+    #     - name: storage_percent
+    #       aggregations: ["Average"]
+    #     - name: active_connections
+    #       aggregations: ["Average"]
+    
+    # If APIM exists in INFRA (uncomment if needed)
+    # - resourceType: "Microsoft.ApiManagement/service"
+    #   resourceGroup: "rg-infra-shared"
+    #   resources: ["apim-infra-shared"]
+    #   metrics:
+    #     - name: Requests
+    #       aggregations: ["Total", "Average"]
+    #     - name: Capacity
+    #       aggregations: ["Average"]
+
+# ServiceMonitor enabled for Prometheus
+serviceMonitor:
+  enabled: true
+  interval: 60s
+

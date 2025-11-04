@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: azure-metrics-exporter
+  namespace: apps
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  
+  # Generator: list of environments to deploy
+  generators:
+    - list:
+        elements:
+          # INFRA environment - deploy to infra cluster
+          - env: infra
+            cluster: https://kubernetes.default.svc
+            namespace: monitoring
+  
+  # Template: defines how each Application is created
+  template:
+    metadata:
+      name: azure-exporter-{{.env}}
+    
+    spec:
+      # ArgoCD Project
+      project: default
+      
+      # Sources: helm chart + values
+      sources:
+        # 1. Config Deploy (values)
+        - repoURL: "https://github.com/your-org/config-deploy-azure-metrics-exporter.git"
+          targetRevision: main
+          ref: values
+        
+        # 2. Helm Chart (templates)
+        - repoURL: "https://github.com/your-org/helm-chart-azure-metrics-exporter.git"
+          targetRevision: main
+          path: "."
+          helm:
+            releaseName: azure-exporter-{{.env}}
+            # Values from config-deploy
+            valueFiles:
+              - $values/values.{{.env}}.yaml
+      
+      # Destination: where to deploy
+      destination:
+        server: "{{.cluster}}"
+        namespace: "{{.namespace}}"
+      
+      # Automatic sync policy
+      syncPolicy:
+        automated:
+          prune: true       # Remove resources that no longer exist
+          selfHeal: true    # Revert manual changes
+        syncOptions:
+          - CreateNamespace=true
+

@@ -1,0 +1,43 @@
+# Secrets - NEVER commit real credentials
+**/secrets/env-secret.*.yaml
+!**/secrets/env-secret.*.yaml.example
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.bak
+
+# Helm
+*.tgz
+charts/
+.helmignore
+
+# Terraform (if using)
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# Temp files
+tmp/
+temp/
+*.tmp
+*.log
+

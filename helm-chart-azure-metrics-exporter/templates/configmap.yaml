@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "azure-metrics-exporter.fullname" . }}-config
+  labels:
+    {{- include "azure-metrics-exporter.labels" . | nindent 4 }}
+data:
+  # Este archivo define QUÉ métricas de Azure queremos extraer
+  # Se monta en /app/config.yaml dentro del pod
+  config.yaml: |
+    {{- .Values.metricsConfig | nindent 4 }}
+

@@ -1,0 +1,14 @@
+# Secrets - NUNCA se commitean
+secrets/env-secret.*.yaml
+!secrets/env-secret.*.yaml.example
+
+# Helm
+*.lock
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+

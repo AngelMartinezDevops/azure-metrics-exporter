@@ -1,0 +1,21 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "azure-metrics-exporter.fullname" . }}
+  labels:
+    {{- include "azure-metrics-exporter.labels" . | nindent 4 }}
+spec:
+  # Selector: encuentra el Service que debe monitorear
+  selector:
+    matchLabels:
+      {{- include "azure-metrics-exporter.selectorLabels" . | nindent 6 }}
+  
+  # Configuración del scrape
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: {{ .Values.serviceMonitor.interval }}
+    scrapeTimeout: 30s
+{{- end }}
+

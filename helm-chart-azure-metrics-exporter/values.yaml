@@ -1,0 +1,140 @@
+# Valores por defecto para azure-metrics-exporter
+# Este archivo contiene la configuración base que puede ser sobreescrita por cada entorno
+
+# Cuántas réplicas (copias) del pod queremos
+replicaCount: 1
+
+# Configuración de la imagen Docker
+image:
+  # Imagen oficial del proyecto en Docker Hub
+  repository: webdevops/azure-metrics-exporter
+  pullPolicy: IfNotPresent
+  # Tag de la versión (latest = última disponible)
+  tag: "latest"
+
+# Service: cómo exponemos el pod internamente en K8s
+service:
+  type: ClusterIP  # Solo accesible dentro del cluster
+  port: 8080       # Puerto donde la app expone /metrics
+
+# ServiceMonitor: le dice a Prometheus "scrapea este servicio"
+serviceMonitor:
+  enabled: true    # Queremos que Prometheus recolecte las métricas
+  interval: 60s    # Cada cuánto tiempo scrapear (60 segundos)
+
+# Ingress: expone el servicio con una URL externa
+ingress:
+  enabled: false   # Por defecto deshabilitado
+  ingressClassName: ""
+  annotations: {}
+  hosts:
+    - host: azure-metrics.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Recursos de CPU/Memoria que puede usar el pod
+resources:
+  limits:
+    cpu: 500m      # Máximo 0.5 CPU
+    memory: 512Mi  # Máximo 512 MB RAM
+  requests:
+    cpu: 100m      # Mínimo garantizado 0.1 CPU
+    memory: 128Mi  # Mínimo garantizado 128 MB RAM
+
+# Credenciales de Azure (se sobrescriben por entorno con secrets)
+azure:
+  # Service Principal credentials
+  tenantId: ""
+  clientId: ""
+  clientSecret: ""
+  subscriptionId: ""
+
+# Configuración de métricas a extraer
+# Aquí definimos QUÉ recursos Azure queremos monitorear
+# Este contenido se monta como archivo /app/config.yaml dentro del pod
+metricsConfig: |
+  # Intervalo de recolección por defecto
+  defaultInterval: 60s
+  
+  # Lista de recursos a monitorear
+  targets:
+    # APIM (API Management)
+    - resourceType: "Microsoft.ApiManagement/service"
+      resourceGroup: "rg-production"  # Cambiar por tu resource group
+      resources: ["*"]  # * = todos los APIM del resource group
+      metrics:
+        - name: Requests
+          aggregations: ["Total", "Average"]
+        - name: Capacity
+          aggregations: ["Average"]
+        - name: Duration
+          aggregations: ["Average", "Maximum"]
+    
+    # DATABASES (Azure SQL)
+    - resourceType: "Microsoft.Sql/servers/databases"
+      resourceGroup: "rg-production"
+      resources: ["*"]
+      metrics:
+        - name: cpu_percent
+          aggregations: ["Average", "Maximum"]
+        - name: dtu_consumption_percent
+          aggregations: ["Average"]
+        - name: storage_percent
+          aggregations: ["Average"]
+        - name: connection_successful
+          aggregations: ["Total"]
+        - name: connection_failed
+          aggregations: ["Total"]
+    
+    # APPLICATION GATEWAY (AGW)
+    - resourceType: "Microsoft.Network/applicationGateways"
+      resourceGroup: "rg-production"
+      resources: ["*"]
+      metrics:
+        - name: ResponseStatus
+          aggregations: ["Total"]
+        - name: TotalRequests
+          aggregations: ["Total"]
+        - name: Throughput
+          aggregations: ["Average"]
+        - name: BackendResponseStatus
+          aggregations: ["Total"]
+    
+    # REDIS CACHE
+    - resourceType: "Microsoft.Cache/redis"
+      resourceGroup: "rg-production"
+      resources: ["*"]
+      metrics:
+        - name: connectedclients
+          aggregations: ["Maximum"]
+        - name: usedmemory
+          aggregations: ["Average", "Maximum"]
+        - name: usedmemorypercentage
+          aggregations: ["Average"]
+        - name: cacheRead
+          aggregations: ["Average"]
+        - name: cacheWrite
+          aggregations: ["Average"]
+        - name: cachehits
+          aggregations: ["Total"]
+        - name: cachemisses
+          aggregations: ["Total"]
+    
+    # STORAGE ACCOUNT
+    - resourceType: "Microsoft.Storage/storageAccounts"
+      resourceGroup: "rg-production"
+      resources: ["*"]
+      metrics:
+        - name: UsedCapacity
+          aggregations: ["Average"]
+        - name: Transactions
+          aggregations: ["Total"]
+        - name: Ingress
+          aggregations: ["Total"]
+        - name: Egress
+          aggregations: ["Total"]
+        - name: SuccessServerLatency
+          aggregations: ["Average"]
+

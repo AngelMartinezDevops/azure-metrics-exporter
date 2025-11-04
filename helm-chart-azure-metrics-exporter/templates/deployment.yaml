@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # Nombre del deployment (usa la función helper)
+  name: {{ include "azure-metrics-exporter.fullname" . }}
+  labels:
+    {{- include "azure-metrics-exporter.labels" . | nindent 4 }}
+spec:
+  # Cuántas réplicas queremos (valor de values.yaml)
+  replicas: {{ .Values.replicaCount }}
+  
+  # Selector: cómo encuentra sus pods
+  selector:
+    matchLabels:
+      {{- include "azure-metrics-exporter.selectorLabels" . | nindent 6 }}
+  
+  # Template del pod (la definición del contenedor)
+  template:
+    metadata:
+      labels:
+        {{- include "azure-metrics-exporter.selectorLabels" . | nindent 8 }}
+      annotations:
+        # Si cambia el configmap, reinicia el pod automáticamente
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      containers:
+      - name: azure-metrics-exporter
+        # Imagen Docker a usar
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        
+        # Variables de entorno con credenciales Azure
+        env:
+        - name: AZURE_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "azure-metrics-exporter.fullname" . }}-secret
+              key: tenantId
+        - name: AZURE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "azure-metrics-exporter.fullname" . }}-secret
+              key: clientId
+        - name: AZURE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "azure-metrics-exporter.fullname" . }}-secret
+              key: clientSecret
+        - name: AZURE_SUBSCRIPTION_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "azure-metrics-exporter.fullname" . }}-secret
+              key: subscriptionId
+        
+        # Puerto que expone el contenedor
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        
+        # Recursos CPU/Memoria
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        
+        # Monta el archivo de configuración de métricas
+        volumeMounts:
+        - name: config
+          mountPath: /app/config.yaml
+          subPath: config.yaml
+      
+      # Volumen con la configuración de métricas
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "azure-metrics-exporter.fullname" . }}-config
+

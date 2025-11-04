@@ -1,0 +1,186 @@
+# Configuration for PRODUCTION environment
+# This is an EXAMPLE - create values.prd.yaml when deploying
+
+replicaCount: 2  # In PROD we want high availability
+
+image:
+  repository: webdevops/azure-metrics-exporter
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+# Higher resources for PROD
+resources:
+  limits:
+    cpu: 1000m      # 1 CPU
+    memory: 1Gi     # 1GB RAM
+  requests:
+    cpu: 200m       # 0.2 CPU
+    memory: 256Mi   # 256 MB RAM
+
+# Azure credentials (overridden by secrets)
+azure:
+  tenantId: "PLACEHOLDER_TENANT_ID"
+  clientId: "PLACEHOLDER_CLIENT_ID"
+  clientSecret: "PLACEHOLDER_CLIENT_SECRET"
+  subscriptionId: "PLACEHOLDER_SUBSCRIPTION_ID"
+
+# Metrics configuration for PRODUCTION
+# Common resources: APIM, DATABASES, AGW, REDIS, STORAGE ACCOUNTS
+metricsConfig: |
+  defaultInterval: 60s
+  
+  targets:
+    # ==========================================
+    # APIM - API Management
+    # ==========================================
+    - resourceType: "Microsoft.ApiManagement/service"
+      resourceGroup: "rg-production"
+      resources: 
+        - "apim-prod-001"
+      metrics:
+        - name: Requests
+          aggregations: ["Total", "Average"]
+        - name: Capacity
+          aggregations: ["Average"]
+        - name: Duration
+          aggregations: ["Average", "Maximum"]
+        - name: FailedRequests
+          aggregations: ["Total"]
+        - name: SuccessfulRequests
+          aggregations: ["Total"]
+        - name: UnauthorizedRequests
+          aggregations: ["Total"]
+        - name: OtherRequests
+          aggregations: ["Total"]
+    
+    # ==========================================
+    # DATABASES - MySQL Flexible Servers
+    # ==========================================
+    - resourceType: "Microsoft.DBforMySQL/flexibleServers"
+      resourceGroup: "rg-production"
+      resources:
+        - "mysql-prod-001"
+      metrics:
+        - name: cpu_percent
+          aggregations: ["Average", "Maximum"]
+        - name: memory_percent
+          aggregations: ["Average", "Maximum"]
+        - name: storage_percent
+          aggregations: ["Average"]
+        - name: active_connections
+          aggregations: ["Average", "Maximum"]
+        - name: connections_failed
+          aggregations: ["Total"]
+        - name: io_consumption_percent
+          aggregations: ["Average"]
+        - name: Queries
+          aggregations: ["Total"]
+    
+    # Additional databases in other resource groups
+    - resourceType: "Microsoft.DBforMySQL/flexibleServers"
+      resourceGroup: "rg-production-app1"
+      resources:
+        - "mysql-prod-app1-001"
+      metrics:
+        - name: cpu_percent
+          aggregations: ["Average", "Maximum"]
+        - name: memory_percent
+          aggregations: ["Average"]
+        - name: active_connections
+          aggregations: ["Average"]
+    
+    - resourceType: "Microsoft.DBforMySQL/flexibleServers"
+      resourceGroup: "rg-production-app2"
+      resources:
+        - "mysql-prod-app2-001"
+      metrics:
+        - name: cpu_percent
+          aggregations: ["Average", "Maximum"]
+        - name: memory_percent
+          aggregations: ["Average"]
+        - name: active_connections
+          aggregations: ["Average"]
+    
+    # ==========================================
+    # APPLICATION GATEWAY (AGW)
+    # ==========================================
+    - resourceType: "Microsoft.Network/applicationGateways"
+      resourceGroup: "rg-production"
+      resources:
+        - "agw-prod-001"
+      metrics:
+        - name: ResponseStatus
+          aggregations: ["Total"]
+        - name: TotalRequests
+          aggregations: ["Total"]
+        - name: Throughput
+          aggregations: ["Average"]
+        - name: BackendResponseStatus
+          aggregations: ["Total"]
+        - name: CurrentConnections
+          aggregations: ["Average"]
+        - name: FailedRequests
+          aggregations: ["Total"]
+        - name: UnhealthyHostCount
+          aggregations: ["Average"]
+        - name: HealthyHostCount
+          aggregations: ["Average"]
+    
+    # ==========================================
+    # REDIS CACHE
+    # ==========================================
+    - resourceType: "Microsoft.Cache/redis"
+      resourceGroup: "rg-production"
+      resources:
+        - "redis-prod-001"
+      metrics:
+        - name: connectedclients
+          aggregations: ["Maximum"]
+        - name: usedmemory
+          aggregations: ["Average", "Maximum"]
+        - name: usedmemorypercentage
+          aggregations: ["Average", "Maximum"]
+        - name: usedmemoryRss
+          aggregations: ["Average", "Maximum"]
+        - name: cacheRead
+          aggregations: ["Average", "Total"]
+        - name: cacheWrite
+          aggregations: ["Average", "Total"]
+        - name: cachehits
+          aggregations: ["Total"]
+        - name: cachemisses
+          aggregations: ["Total"]
+        - name: evictedkeys
+          aggregations: ["Total"]
+        - name: expiredkeys
+          aggregations: ["Total"]
+        - name: operationsPerSecond
+          aggregations: ["Average", "Maximum"]
+    
+    # ==========================================
+    # STORAGE ACCOUNTS
+    # ==========================================
+    - resourceType: "Microsoft.Storage/storageAccounts"
+      resourceGroup: "rg-production"
+      resources:
+        - "storageaccountprod001"
+        - "storageaccountprod002"
+      metrics:
+        - name: UsedCapacity
+          aggregations: ["Average"]
+        - name: Transactions
+          aggregations: ["Total"]
+        - name: Ingress
+          aggregations: ["Total"]
+        - name: Egress
+          aggregations: ["Total"]
+        - name: SuccessServerLatency
+          aggregations: ["Average"]
+        - name: Availability
+          aggregations: ["Average"]
+
+# ServiceMonitor configurado para PRD
+serviceMonitor:
+  enabled: true
+  interval: 60s  # Scrapear cada 60 segundos
+

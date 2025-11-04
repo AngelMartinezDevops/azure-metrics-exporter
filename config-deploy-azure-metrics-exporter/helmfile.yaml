@@ -1,0 +1,27 @@
+# Helmfile: orquesta el despliegue del chart con valores por entorno
+# Este archivo lee:
+# 1. El helm chart del otro repo (helm-chart-azure-metrics-exporter)
+# 2. Los values específicos de este entorno (values.{env}.yaml)
+
+# Definición de entornos disponibles
+environments:
+  infra:    # Entorno de infraestructura
+  tst:      # Entorno de testing
+  uat:      # Entorno de UAT
+  prd:      # Entorno de producción
+
+# Release a desplegar
+releases:
+  # Nombre dinámico: azure-exporter-infra, azure-exporter-tst, etc
+  - name: azure-exporter-{{`{{ .Environment.Name }}`}}
+    
+    # Namespace donde se despliega
+    namespace: monitoring
+    
+    # Path al helm chart (repo separado)
+    chart: ../helm-chart-azure-metrics-exporter
+    
+    # Values específicos del entorno
+    values:
+      - values.{{ .Environment.Name }}.yaml
+

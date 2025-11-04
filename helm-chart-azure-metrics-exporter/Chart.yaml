@@ -1,0 +1,11 @@
+apiVersion: v2
+name: azure-metrics-exporter
+description: Helm chart para desplegar azure-metrics-exporter en Kubernetes
+type: application
+
+# Versión del chart (se incrementa cada vez que cambiamos el chart)
+version: 0.1.0
+
+# Versión de la aplicación que desplegamos
+appVersion: "latest"
+
